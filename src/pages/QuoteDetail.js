@@ -1,32 +1,52 @@
 import { useParams, Route, Link, useRouteMatch } from "react-router-dom";
 import Comments from "./../components/comments/Comments";
+import LoadingSpinner from "./../components/UI/LoadingSpinner";
 import HighlightedQuote from "./../components/quotes/HighlightedQuote";
-
-const DUMMY_QUOTES = [
-  {
-    id: "q1",
-    author: "Andy",
-    text: "It does not matter how slowly you go as long as you do not stop.",
-  },
-  {
-    id: "q2",
-    author: "Harriet",
-    text: "It's better to have a full bottle in front of me, than a full frontal lobotomy.",
-  },
-];
+import useHttp from "../hooks/use-http";
+import { getSingleQuote } from "../lib/api";
+import { useEffect } from "react";
 
 const QuoteDetail = () => {
   const match = useRouteMatch();
   const params = useParams();
-  const quote = DUMMY_QUOTES.find((quote) => quote.id === params.quoteId);
+  const { quoteId } = params;
 
-  if (!quote) {
-    return <p>Error - Could not find quote with id: {params.quoteId}</p>;
+  const {
+    sendRequest,
+    status,
+    data: loadedQuote,
+    error,
+  } = useHttp(getSingleQuote, true);
+
+  // const quote = loadedQuote.find((quote) => quote.id === params.quoteId);
+
+  useEffect(() => {
+    sendRequest(quoteId);
+  }, [quoteId, sendRequest]);
+
+  if (status === "pending") {
+    return (
+      <div className="centered">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <p className="centered">{error}</p>;
+  }
+
+  if (!loadedQuote.text) {
+    return (
+      <p className="centered">
+        Error - Could not find quote with id: {params.quoteId}
+      </p>
+    );
   }
 
   return (
     <div>
-      <HighlightedQuote text={quote.text} author={quote.author} />
+      <HighlightedQuote text={loadedQuote.text} author={loadedQuote.author} />
       <Route path={`${match.path}`} exact>
         <div className="centered">
           <Link className="btn--flat" to={`${match.url}/comments`}>
